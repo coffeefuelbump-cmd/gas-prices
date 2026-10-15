@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>gas buddy by Mete Kaya</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --panel2:#1c232c; --line:#2a3441;
+    --text:#e6edf3; --muted:#8b98a5; --accent:#3fb950; --hot:#f85149; --blue:#58a6ff;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:radial-gradient(1200px 600px at 20% -10%,#16273a 0%,var(--bg) 55%) fixed;
+    color:var(--text); font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    padding:22px 16px 60px;
+  }
+  .wrap{max-width:960px;margin:0 auto}
+  header{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;justify-content:space-between;margin-bottom:14px}
+  h1{font-size:24px;margin:0;letter-spacing:-.4px}
+  h1 .fuel{color:var(--muted);font-size:14px;font-weight:500;display:block;margin-top:3px}
+  .live{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;letter-spacing:.08em;
+    text-transform:uppercase;color:var(--accent);border:1px solid #1f6f37;background:#0f2a1a;padding:5px 10px;border-radius:999px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulse 1.6s infinite}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.8)}}
+  .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;padding:10px;margin-bottom:12px}
+  input[type=text]{flex:1 1 240px;min-width:180px;background:var(--panel2);border:1px solid var(--line);color:var(--text);
+    border-radius:9px;padding:10px 12px;font-size:14px;outline:none}
+  input[type=text]:focus{border-color:var(--blue);box-shadow:0 0 0 3px #1f6feb33}
+  button{cursor:pointer;border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:9px;
+    padding:10px 14px;font-size:14px;font-weight:600;transition:.15s}
+  button:hover{background:#243040;border-color:#3d4c60}
+  button.primary{background:#1f6feb;border-color:#1f6feb}
+  button.primary:hover{background:#2a7ff5}
+  button:disabled{opacity:.5;cursor:default}
+  label.chk{display:inline-flex;gap:7px;align-items:center;font-size:13px;color:var(--muted);user-select:none;cursor:pointer}
+  .status{font-size:13px;color:var(--muted);margin:0 2px 12px;min-height:19px}
+  .status.err{color:#ffb4ae}
+  .status b{color:var(--text)}
+  .summary{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+  .pill{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-size:13px;color:var(--muted)}
+  .pill b{color:var(--text);font-family:var(--mono)}
+  .unsorted{font-size:12px;color:var(--muted);text-align:right;margin:0 2px 8px}
+  .list{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .row{display:grid;grid-template-columns:34px 1fr auto;gap:12px;align-items:center;padding:13px 16px;border-top:1px solid var(--line);position:relative}
+  .row:first-child{border-top:0}
+  .row:hover{background:#1a222c}
+  .row.top{border-left:3px solid var(--hot)}
+  .row.bottom{border-left:3px solid var(--accent)}
+  .rank{font-family:var(--mono);color:var(--muted);font-size:13px;text-align:center}
+  .name{font-weight:700;font-size:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .sub{font-weight:500;color:var(--muted);font-size:13px}
+  .tag{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:999px}
+  .tag.hot{background:#3d1418;color:#ff9d95;border:1px solid #6e2a2a}
+  .tag.cold{background:#0f2a1a;color:#7ee787;border:1px solid #1f6f37}
+  .meta{color:var(--muted);font-size:12.5px;margin-top:3px}
+  .meta a{color:var(--muted);text-decoration:none;border-bottom:1px dotted #4b5766}
+  .meta a:hover{color:var(--blue)}
+  .price{font-family:var(--mono);font-size:22px;font-weight:800;text-align:right;white-space:nowrap}
+  .price small{font-size:11px;font-weight:600;color:var(--muted);display:block;letter-spacing:.04em}
+  .skeleton{padding:16px;color:var(--muted);font-size:14px}
+  .bar-track{height:3px;background:var(--line);border-radius:2px;overflow:hidden;margin-top:8px}
+  .bar-fill{height:100%;background:var(--blue)}
+  footer{margin-top:18px;font-size:12px;color:var(--muted);line-height:1.6}
+  footer a{color:var(--blue);text-decoration:none}
+  .adv{margin-top:6px}
+  .adv summary{cursor:pointer;font-size:12.5px;color:var(--muted)}
+  .adv input{width:100%;margin-top:8px;background:var(--panel2);border:1px solid var(--line);color:var(--text);
+    border-radius:8px;padding:8px 10px;font-size:13px}
+  @media (max-width:560px){
+    .price{font-size:19px}
+    .row{grid-template-columns:26px 1fr auto;padding:12px}
+    h1{font-size:20px}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>⛽ gas buddy by Mete Kaya
+        <span class="fuel" id="fuelNote">Regular unleaded · price per gallon · sorted most expensive → cheapest</span>
+      </h1>
+    </div>
+    <div class="live"><span class="dot"></span><span id="liveLabel">Live</span></div>
+  </header>
+
+  <div class="bar">
+    <input type="text" id="loc" placeholder="ZIP code or City, ST  (e.g. 75201 or Dallas, TX)" spellcheck="false" />
+    <button class="primary" id="go">Show prices</button>
+    <button id="geo" title="Use my current location">📍 My location</button>
+    <button id="reload" title="Refresh now">⟳ Refresh</button>
+    <label class="chk"><input type="checkbox" id="auto" checked /> auto-refresh every 30 sec</label>
+  </div>
+
+  <div class="status" id="status">Starting…</div>
+
+  <div class="summary" id="summary" hidden>
+    <div class="pill">Area: <b id="sArea">—</b></div>
+    <div class="pill">Stations listed: <b id="sCount">—</b></div>
+    <div class="pill">Range: <b id="sRange">—</b></div>
+    <div class="pill">Average: <b id="sAvg">—</b></div>
+    <div class="pill">Fetched: <b id="sTime">—</b></div>
+  </div>
+
+  <div class="unsorted" id="unsorted" hidden>⬇ highest price first · lowest price last</div>
+
+  <div class="list" id="list">
+    <div class="skeleton">Waiting for data…</div>
+  </div>
+
+  <footer>
+    <details class="adv">
+      <summary>Advanced: optional Jina API key (only needed if live lookups get rate-limited)</summary>
+      <input type="text" id="jinaKey" placeholder="jina_…  (stored only in this browser)" spellcheck="false" />
+    </details>
+    <p style="margin:10px 0 0">
+      Prices are community-reported and can be a few minutes to a few hours old — each station shows when it was last reported.
+      GasBuddy publishes the lowest-priced stations it knows for an area on its city pages, so this list is the most expensive → cheapest
+      <em>among those listings</em>, not every pump in town.
+    </p>
+    <p style="margin:6px 0 0">
+      Live data via <a href="https://www.gasbuddy.com" target="_blank" rel="noopener">GasBuddy</a>, fetched with
+      <a href="https://jina.ai/reader/" target="_blank" rel="noopener">Jina Reader</a>.
+      Location lookup: <a href="https://zippopotam.us" target="_blank" rel="noopener">Zippopotam.us</a>,
+      <a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a> and
+      <a href="https://www.bigdatacloud.com" target="_blank" rel="noopener">BigDataCloud</a>.
+    </p>
+  </footer>
+</div>
+
+<script>
+"use strict";
+
+/* ------------------------------------------------------------------ config */
+const JINA      = "https://r.jina.ai/";
+const REFRESH_MS = 30 * 1000;   // 30 seconds
+const FETCH_TIMEOUT_MS = 60000;
+
+const STATE_NAME_BY_ABBR = {
+  AL:"Alabama",AK:"Alaska",AZ:"Arizona",AR:"Arkansas",CA:"California",CO:"Colorado",CT:"Connecticut",
+  DE:"Delaware",DC:"District of Columbia",FL:"Florida",GA:"Georgia",HI:"Hawaii",ID:"Idaho",IL:"Illinois",
+  IN:"Indiana",IA:"Iowa",KS:"Kansas",KY:"Kentucky",LA:"Louisiana",ME:"Maine",MD:"Maryland",MA:"Massachusetts",
+  MI:"Michigan",MN:"Minnesota",MS:"Mississippi",MO:"Missouri",MT:"Montana",NE:"Nebraska",NV:"Nevada",
+  NH:"New Hampshire",NJ:"New Jersey",NM:"New Mexico",NY:"New York",NC:"North Carolina",ND:"North Dakota",
+  OH:"Ohio",OK:"Oklahoma",OR:"Oregon",PA:"Pennsylvania",RI:"Rhode Island",SC:"South Carolina",SD:"South Dakota",
+  TN:"Tennessee",TX:"Texas",UT:"Utah",VT:"Vermont",VA:"Virginia",WA:"Washington",WV:"West Virginia",
+  WI:"Wisconsin",WY:"Wyoming"
+};
+
+/* city slugs that GasBuddy does not derive by simple hyphenation */
+const CITY_SLUG_FIXES = {
+  "new york":"new-york-city","new york city":"new-york-city",
+  "st louis":"st-louis","saint louis":"st-louis",
+  "washington dc":"washington","washington d.c":"washington"
+};
+
+/* ---------------------------------------------------------------- elements */
+const $ = id => document.getElementById(id);
+const el = { loc:$("loc"), go:$("go"), geo:$("geo"), reload:$("reload"), auto:$("auto"),
+             status:$("status"), list:$("list"), summary:$("summary"), unsorted:$("unsorted"),
+             sArea:$("sArea"), sCount:$("sCount"), sRange:$("sRange"), sAvg:$("sAvg"), sTime:$("sTime"),
+             jinaKey:$("jinaKey"), liveLabel:$("liveLabel") };
+
+let state = { location:null, scope:null, stations:[], fetchedAt:null, busy:false, timer:null, countdown:null, resolved:null, area:null };
+
+/* ------------------------------------------------------------------ storage */
+const store = {
+  get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } },
+  set(k,v){ try { localStorage.setItem(k,v); } catch(e){} }
+};
+
+/* ------------------------------------------------------------- location bits */
+function slugify(s){
+  return String(s).toLowerCase().replace(/&/g," and ").replace(/\./g,"").replace(/['’`]/g,"")
+    .replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"");
+}
+function citySlug(city){
+  const c = String(city).toLowerCase().trim();
+  if (CITY_SLUG_FIXES[c]) return CITY_SLUG_FIXES[c];
+  return slugify(city);
+}
+function stateSlug(stateName){
+  const s = String(stateName).trim();
+  if (/^district of columbia$/i.test(s) || /^washington,? ?d\.?c\.?$/i.test(s)) return "washington-dc";
+  return slugify(s);
+}
+/* a few alternative spellings worth trying when the first slug 404s */
+function citySlugVariants(city){
+  const base = citySlug(city), out = [base];
+  const add = v => { if (v && !out.includes(v)) out.push(v); };
+  add(base.replace(/^saint-/, "st-"));
+  add(base.replace(/^st-/, "saint-"));
+  add(base.replace(/-city$/, ""));
+  add(base + "-city");
+  add(base.replace(/^fort-/, "ft-"));
+  add(base.replace(/^mt-/, "mount-"));
+  add(base.replace(/-/g, ""));
+  return out;
+}
+/* IANA timezone → a sensible default city when we have nothing else */
+const TZ_DEFAULT = {
+  "America/New_York":["New York","New York"], "America/Chicago":["Chicago","Illinois"],
+  "America/Denver":["Denver","Colorado"], "America/Phoenix":["Phoenix","Arizona"],
+  "America/Los_Angeles":["Los Angeles","California"], "America/Detroit":["Detroit","Michigan"],
+  "America/Indiana/Indianapolis":["Indianapolis","Indiana"], "America/Anchorage":["Anchorage","Alaska"],
+  "Pacific/Honolulu":["Honolulu","Hawaii"], "America/Boise":["Boise","Idaho"],
+  "America/Kentucky/Louisville":["Louisville","Kentucky"], "America/Menominee":["Green Bay","Wisconsin"]
+};
+function timezoneDefault(){
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const hit = TZ_DEFAULT[tz];
+    if (hit) return { city:hit[0], stateName:hit[1] };
+  } catch(e){}
+  return { city:"New York", stateName:"New York" };
+}
+
+async function fetchJSON(url, label){
+  const ctrl = new AbortController();
+  const t = setTimeout(()=>ctrl.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const r = await fetch(url, { signal:ctrl.signal, headers:{ "Accept":"application/json" } });
+    if (!r.ok) throw new Error(label + " returned HTTP " + r.status);
+    return await r.json();
+  } finally { clearTimeout(t); }
+}
+
+/* ZIP → city/state */
+async function fromZip(zip){
+  const j = await fetchJSON("https://api.zippopotam.us/us/" + encodeURIComponent(zip), "ZIP lookup");
+  const p = j && j.places && j.places[0];
+  if (!p) throw new Error("That ZIP code was not recognised.");
+  return { city:p["place name"], stateName:p.state };
+}
+/* "City, ST" or bare city → canonical city/state via geocoder */
+async function fromText(city, stateInput){
+  const q = city + (stateInput ? ", " + stateInput : "") + ", United States";
+  const j = await fetchJSON("https://geocoding-api.open-meteo.com/v1/search?count=10&language=en&countryCode=US&name="
+      + encodeURIComponent(city), "Location lookup");
+  const results = (j && j.results) || [];
+  if (!results.length) throw new Error('Could not find "' + city + '". Try "City, ST" (e.g. Austin, TX).');
+  let pick = results[0];
+  if (stateInput) {
+    const want = /^[A-Za-z]{2}$/.test(stateInput)
+      ? (STATE_NAME_BY_ABBR[stateInput.toUpperCase()] || stateInput)
+      : stateInput;
+    const match = results.find(r => String(r.admin1||"").toLowerCase() === String(want).toLowerCase());
+    if (match) pick = match;
+  }
+  return { city:pick.name, stateName:pick.admin1 || stateInput || "" };
+}
+/* GPS → city/state */
+async function fromCoords(lat, lon){
+  const j = await fetchJSON("https://api.bigdatacloud.net/data/reverse-geocode-client?localityLanguage=en&latitude="
+      + enc(lat) + "&longitude=" + enc(lon), "Reverse geocoding");
+  return { city:j.city || j.locality || j.principalSubdivision, stateName:j.principalSubdivision };
+}
+function enc(n){ return encodeURIComponent(n); }
+
+/* approximate location from the internet connection — no permission needed, works from a local file */
+function normalizeState(s){
+  if (!s) return s;
+  const t = String(s).trim();
+  if (/^[A-Za-z]{2}$/.test(t)) return STATE_NAME_BY_ABBR[t.toUpperCase()] || t;
+  return t;
+}
+async function fromIP(){
+  const providers = [
+    { url:"https://get.geojs.io/v1/ip/geo.json",
+      pick:j => ({ city:j.city, stateName:j.region, countryCode:j.country_code }) },
+    { url:"https://ipwho.is/",
+      pick:j => j && j.success === false ? null : ({ city:j.city, stateName:j.region, countryCode:j.country_code }) },
+    { url:"https://ipapi.co/json/",
+      pick:j => ({ city:j.city, stateName:j.region || j.region_code, countryCode:j.country_code }) }
+  ];
+  let lastErr = null;
+  for (const p of providers){
+    try {
+      const j = await fetchJSON(p.url, "Location service");
+      const r = p.pick(j);
+      if (r && r.city) { r.stateName = normalizeState(r.stateName); return r; }
+    } catch(e){ lastErr = e; }
+  }
+  throw lastErr || new Error("Could not look up your approximate location.");
+}
+
+/* turn whatever the user typed into {citySlugs[], stateSlug} */
+async function resolveLocation(input){
+  const raw = String(input || "").trim();
+  if (!raw) throw new Error("Enter a ZIP code or a city and state.");
+
+  if (/gasbuddy\.com\/gasprices\//i.test(raw)) {
+    const path = raw.replace(/^.*gasprices\//i, "").split(/[?#]/)[0].replace(/\/+$/,"").split("/").filter(Boolean);
+    const st = path[0];
+    const ct = path.slice(1).join("-");
+    return { labelSt:st.replace(/-/g," "), labelCity:ct.replace(/-/g," "),
+             paths:[ "/" + [st, ct].filter(Boolean).join("/") ], guessed:false };
+  }
+
+  let city, stateName;
+  if (/^\d{5}(-\d{4})?$/.test(raw)) { const r = await fromZip(raw); city = r.city; stateName = r.stateName; }
+  else {
+    const parts = raw.split(",").map(s=>s.trim()).filter(Boolean);
+    const r = await fromText(parts[0], parts[1]);
+    city = r.city; stateName = r.stateName;
+  }
+  if (!city) throw new Error("Could not work out that location.");
+
+  const S = stateSlug(stateName || ""), C = citySlug(city);
+  const paths = (S && C) ? citySlugVariants(city).map(c => "/" + S + "/" + c) : [];
+  if (S) paths.push("/" + S);           // statewide fallback (mixed cities)
+  return { city, stateName, paths, guessed:true };
+}
+
+/* ----------------------------------------------------------------- fetching */
+async function jinaGet(targetUrl){
+  const headers = { "Accept":"text/plain" };
+  const key = (el.jinaKey.value || store.get("jinaKey") || "").trim();
+  if (key) headers["Authorization"] = "Bearer " + key;
+  const ctrl = new AbortController();
+  const t = setTimeout(()=>ctrl.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const r = await fetch(JINA + targetUrl, { headers, signal:ctrl.signal });
+    if (!r.ok) throw new Error("Live source returned HTTP " + r.status + (r.status===402||r.status===429 ? " (rate limited)" : ""));
+    return await r.text();
+  } finally { clearTimeout(t); }
+}
+
+function parseStations(md){
+  if (/Just a moment|Enable JavaScript and cookies/i.test(md.slice(0,2000)) && !/gasbuddy\.com\/station\//.test(md))
+    throw new Error("The live source blocked this request (bot check). Try again in a minute.");
+  const blocks = [...md.matchAll(/^### \[([^\]]+)\]\((https:\/\/www\.gasbuddy\.com\/station\/(\d+))\)/gm)];
+  const out = [];
+  for (let i = 0; i < blocks.length; i++){
+    const b = blocks[i];
+    const end = i + 1 < blocks.length ? blocks[i+1].index : Math.min(md.length, b.index + 1600);
+    const seg = md.slice(b.index, Math.min(end, b.index + 1600));
+    const pm  = seg.match(/\$(\d+\.\d{2})\b/);
+    if (!pm) continue;                                    // station with no reported price
+    const head = seg.slice(0, pm.index + 6);
+    let subBrand = null;
+    const lines = head.split("\n").map(s=>s.trim()).filter(Boolean).filter(l=>{
+      if (/^\[?!?\[?Image/i.test(l) || l.startsWith("![") || l.startsWith("[![")) return false;
+      if (/^\d+$/.test(l)) return false;
+      if (/^&/.test(l)) { subBrand = l.replace(/^&\s*/,"").trim(); return false; }
+      if (/^(#|###|Details|Amenities|Reviews|\*+)$/.test(l)) return false;
+      return true;
+    }).slice(1);                                           // drop the "### [Brand](...)" header
+    const street = lines.find(l => /\d/.test(l) && !/,\s*[A-Z]{2}\b/.test(l)) || null;
+    const cityState = lines.find(l => /,\s*[A-Z]{2}\b/.test(l)) || null;
+    const tm = seg.match(/(\d+)\s+(Second|Minute|Hour|Day|Week|Month)s?\s+Ago/i) || seg.match(/(Just Now|Moments? Ago)/i);
+    out.push({
+      brand: b[1].trim(), subBrand, url: b[2],
+      price: parseFloat(pm[1]),
+      where: [street, cityState].filter(Boolean).join(" · "),
+      ago: tm ? tm[0].replace(/\s+/g," ") : null
+    });
+  }
+  return out;
+}
+
+function pageAreaName(md){
+  const m = md.match(/# Top 10 Gas Station[^\n]*? in ([^\n]+)/i) || md.match(/Title: [^\n]*? in ([^\n]+)/i);
+  return m ? m[1].trim() : null;
+}
+
+async function loadPrices(resolved){
+  let firstError = null;
+  for (let i = 0; i < resolved.paths.length; i++){
+    const path = resolved.paths[i];
+    try {
+      const md = await jinaGet("https://www.gasbuddy.com/gasprices" + path);
+      const stations = parseStations(md);
+      if (stations.length) {
+        const area = pageAreaName(md) || resolved.label || (resolved.city ? (resolved.city + ", " + resolved.stateName) : path.replace(/^\//,"").replace(/\//g," "));
+        const statewide = resolved.guessed && stations.length && i === resolved.paths.length - 1 && resolved.paths.length > 1;
+        return { stations, area, scope: statewide ? "state" : "city" };
+      }
+    } catch(e){ if (!firstError) firstError = e; }
+  }
+  if (firstError) throw firstError;
+  throw new Error("No stations with a reported price were found for that location. Try a nearby larger city, e.g. \"Houston, TX\".");
+}
+
+/* ------------------------------------------------------------------ rendering */
+const money = n => "$" + n.toFixed(2);
+function escapeHTML(s){ return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+
+function render(){
+  const list = state.stations;
+  if (!list.length){ el.list.innerHTML = '<div class="skeleton">No prices to show.</div>'; return; }
+
+  const sorted = [...list].sort((a,b) => b.price - a.price || a.brand.localeCompare(b.brand)); // expensive → cheap
+  const hi = sorted[0], lo = sorted[sorted.length-1];
+  const prices = sorted.map(s => s.price);
+  const avg = prices.reduce((a,b)=>a+b,0) / prices.length;
+
+  el.list.innerHTML = sorted.map((s, i) => {
+    const isTop = s === hi, isBottom = s === lo;
+    const cls = "row" + (isTop ? " top" : "") + (isBottom && sorted.length > 1 ? " bottom" : "");
+    const tag = isTop ? '<span class="tag hot">most expensive</span>'
+              : isBottom && sorted.length > 1 ? '<span class="tag cold">cheapest</span>' : "";
+    const sub = s.subBrand ? ' <span class="sub">&amp; ' + escapeHTML(s.subBrand) + '</span>' : "";
+    const meta = [
+      s.where ? escapeHTML(s.where) : null,
+      s.ago ? "reported " + escapeHTML(s.ago.toLowerCase()) : null
+    ].filter(Boolean).join(" &nbsp;·&nbsp; ");
+    return '<div class="' + cls + '">'
+      + '<div class="rank">' + (i + 1) + '</div>'
+      + '<div>'
+        + '<div class="name">' + escapeHTML(s.brand) + sub + tag + '</div>'
+        + (meta ? '<div class="meta">' + meta
+              + ' &nbsp;·&nbsp; <a href="' + s.url + '" target="_blank" rel="noopener">station details ↗</a></div>' : '')
+      + '</div>'
+      + '<div class="price">' + money(s.price) + '<small>PER GALLON</small></div>'
+      + '</div>';
+  }).join("");
+
+  el.summary.hidden = false;
+  el.unsorted.hidden = false;
+  el.sArea.textContent   = state.area + (state.scope === "state" ? " (statewide)" : "");
+  el.sCount.textContent  = sorted.length;
+  el.sRange.textContent  = money(hi.price) + " – " + money(lo.price);
+  el.sAvg.textContent    = money(avg);
+  el.sTime.textContent   = state.fetchedAt.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+}
+
+/* --------------------------------------------------------------------- flow */
+function setStatus(html, isErr){ el.status.className = "status" + (isErr ? " err" : ""); el.status.innerHTML = html; }
+
+async function refresh(userInitiated){
+  if (state.busy) return;
+  state.busy = true;
+  el.go.disabled = el.reload.disabled = el.geo.disabled = true;
+  clearInterval(state.countdown); state.countdown = null;
+  el.liveLabel.textContent = el.auto.checked ? "Updating…" : "Paused";
+  setStatus('<b>Fetching live prices…</b> this can take up to ~15 seconds.');
+  const skeleton = el.list.querySelector(".skeleton");
+  if (!skeleton) el.list.innerHTML = '<div class="skeleton">Fetching live prices…</div>';
+
+  try {
+    const resolved = state.resolved || await resolveLocation(state.location || el.loc.value);
+    state.resolved  = resolved;
+    state.location  = state.location || el.loc.value.trim();
+    const data = await loadPrices(resolved);
+    state.stations  = data.stations;
+    state.area      = data.area;
+    state.scope     = data.scope;
+    state.fetchedAt = new Date();
+    render();
+    setStatus("Showing <b>" + data.stations.length + "</b> stations, most expensive first. Updated "
+      + state.fetchedAt.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"}) + ".");
+    el.loc.value = resolved.guessed && resolved.city ? (resolved.city + ", " + shortState(resolved.stateName)) : el.loc.value;
+  } catch (e) {
+    state.stations = [];
+    el.list.innerHTML = '<div class="skeleton">Could not load prices. ' + escapeHTML(e.message || String(e)) + '</div>';
+    setStatus("⚠︎ <b>" + escapeHTML(e.message || String(e)) + "</b>", true);
+  } finally {
+    state.busy = false;
+    el.go.disabled = el.reload.disabled = el.geo.disabled = false;
+    scheduleRefresh();
+  }
+}
+
+function shortState(name){
+  if (!name) return "";
+  const hit = Object.entries(STATE_NAME_BY_ABBR).find(([,v]) => v.toLowerCase() === String(name).toLowerCase());
+  return hit ? hit[0] : name;
+}
+
+function scheduleRefresh(){
+  clearTimeout(state.timer); clearInterval(state.countdown);
+  state.countdown = null;
+  if (!el.auto.checked) { el.liveLabel.textContent = "Paused"; return; }
+  let left = Math.round(REFRESH_MS / 1000);
+  const paint = () => {
+    if (!el.auto.checked) { el.liveLabel.textContent = "Paused"; return; }
+    el.liveLabel.textContent = "Live · " + Math.floor(Math.max(0, left) / 60) + ":" + String(Math.max(0, left) % 60).padStart(2, "0");
+  };
+  paint();
+  state.countdown = setInterval(() => {
+    left -= 1;
+    if (left <= 0) { clearInterval(state.countdown); state.countdown = null; }
+    paint();
+  }, 1000);
+  state.timer = setTimeout(() => refresh(), REFRESH_MS);
+}
+
+async function goWithInput(){
+  const v = el.loc.value.trim();
+  if (!v) { setStatus("Enter a ZIP code or a city and state first.", true); return; }
+  store.set("lastLocation", v);
+  state.location = v; state.resolved = null; state.timer && clearTimeout(state.timer);
+  await refresh(true);
+}
+
+/* best guess from the machine's timezone — used when GPS is unavailable or denied */
+async function fallbackLocation(note){
+  const d = timezoneDefault();
+  let city = d.city, stateName = d.stateName;
+  try { const r = await fromText(d.city, d.stateName); city = r.city; stateName = r.stateName; } catch(e){}
+  el.loc.value = city + ", " + shortState(stateName);
+  state.location = el.loc.value; state.resolved = null;
+  if (note) setStatus(note + " Showing <b>" + escapeHTML(el.loc.value) + "</b> — type your own ZIP or city above any time.");
+  await refresh(true);
+}
+
+/* wrap the browser GPS call so it can never hang the button */
+function getPosition(timeoutMs){
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) return reject(new Error("no geolocation in this browser"));
+    let settled = false;
+    const timer = setTimeout(() => { if (!settled){ settled = true; reject(new Error("timed out")); } }, timeoutMs + 1500);
+    navigator.geolocation.getCurrentPosition(
+      p => { if (!settled){ settled = true; clearTimeout(timer); resolve(p); } },
+      e => { if (!settled){ settled = true; clearTimeout(timer); reject(e); } },
+      { enableHighAccuracy:false, timeout:timeoutMs, maximumAge:600000 });
+  });
+}
+
+/* use a resolved {city, stateName, countryCode?} and load prices for it */
+async function applyLocation(r, how){
+  if (r.countryCode && !/^(US|CA)$/i.test(r.countryCode)) {
+    setStatus("⚠︎ You appear to be outside the United States. GasBuddy only has fuel in the US, so results may be empty — type a US ZIP code instead.", true);
+  }
+  el.loc.value = r.city + ", " + shortState(r.stateName);
+  state.location = el.loc.value; state.resolved = null;
+  await refresh(true);
+  if (how) setStatus(el.status.innerHTML + ' <span style="color:var(--muted)">Located via ' + escapeHTML(how) + ".</span>");
+}
+
+async function useMyLocation(silent){
+  if (!silent) setStatus('<b>Working out where you are…</b>');
+  try {
+    const pos = await getPosition(6000);                      // 1) precise GPS (only if the browser allows it)
+    const r = await fromCoords(pos.coords.latitude, pos.coords.longitude);
+    return applyLocation(r, "your device's GPS");
+  } catch(e){ /* blocked or refused — fall through to the next method */ }
+
+  try {
+    const r = await fromIP();                                 // 2) approximate, from your internet connection
+    return applyLocation(r, "your internet connection (approximate — city level)");
+  } catch(e){ /* no connection-based lookup available */ }
+
+  return fallbackLocation(silent ? "" : "Couldn't detect your location."); // 3) last resort
+}
+
+/* ------------------------------------------------------------------ start up */
+el.go.addEventListener("click", goWithInput);
+el.reload.addEventListener("click", () => { state.resolved = null; refresh(true); });
+el.geo.addEventListener("click", () => useMyLocation(false));
+el.loc.addEventListener("keydown", e => { if (e.key === "Enter") goWithInput(); });
+el.auto.addEventListener("change", scheduleRefresh);
+el.jinaKey.addEventListener("change", () => store.set("jinaKey", el.jinaKey.value.trim()));
+
+(async function init(){
+  el.jinaKey.value = store.get("jinaKey") || "";
+  const saved = store.get("lastLocation");
+  if (saved) {                                   // remember where the user last looked
+    el.loc.value = saved; state.location = saved;
+    return refresh(true);
+  }
+  useMyLocation(true);                           // silent: always ends up showing prices
+})();
+</script>
+</body>
+</html>
